@@ -1,0 +1,99 @@
+/**
+ * Код на Kotlin для генерации результатов экзаменов и зачетов
+ */
+
+package by.derovi.test
+
+import java.text.SimpleDateFormat
+import java.util.Date
+import kotlin.math.min
+import kotlin.random.Random
+
+enum class Report {
+    EXAM, CREDIT, BOTH
+}
+class Student(val id: Int, val sem: Int)
+class Subject(val id: Int, val start_sem: Int, val end_sem: Int, val report: Report)
+class ExamResult(val student_id: Int, val subject_id: Int, val semester: Int, val exam_date: Date, val grade: Int)
+class CreditResult(val student_id: Int, val subject_id: Int, val semester: Int, val credit_date: Date, val credited: Boolean)
+
+fun getRandomDate(semester: Int) =
+    Date(
+        123 - (9 - semester) / 2,
+        if (semester % 2 == 0) Random.nextInt(5, 6) else 1,
+        Random.nextInt(1, 26),
+    )
+
+fun main() {
+    val students = listOf(
+        Student(12345, 8),
+        Student(23456, 7),
+        Student(34567, 6),
+        Student(45678, 5),
+        Student(56789, 4),
+        Student(67890, 3),
+        Student(78901, 2),
+        Student(89012, 1),
+        Student(90123, 8),
+        Student(10234, 7),
+    )
+
+    val subjects = listOf(
+        Subject(1, 1, 3, Report.BOTH),
+        Subject(2, 2, 4, Report.EXAM),
+        Subject(3, 3, 5, Report.CREDIT),
+        Subject(4, 4, 6, Report.CREDIT),
+        Subject(5, 5, 8, Report.BOTH),
+        Subject(6, 6, 7, Report.CREDIT),
+        Subject(7, 7, 8, Report.EXAM),
+        Subject(8, 1, 1, Report.CREDIT),
+        Subject(9, 2, 3, Report.EXAM),
+        Subject(10, 3, 4, Report.CREDIT),
+    )
+
+    val examResults = mutableListOf<ExamResult>()
+    val creditResults = mutableListOf<CreditResult>()
+    for (student in students) {
+        for (subject in subjects) {
+            for (semester in subject.start_sem..min(student.sem - 1, subject.end_sem)) {
+                if (subject.report in setOf(Report.EXAM, Report.BOTH)) {
+                    examResults.add(ExamResult(
+                        student.id,
+                        subject.id,
+                        semester,
+                        getRandomDate(semester),
+                        if (Random.nextInt() % 10 == 0) {
+                            Random.nextInt(1, 3)
+                        } else {
+                            Random.nextInt(4, 10)
+                        },
+                    ))
+                }
+                if (subject.report in setOf(Report.CREDIT, Report.BOTH)) {
+                    creditResults.add(CreditResult(
+                        student.id,
+                        subject.id,
+                        semester,
+                        getRandomDate(semester),
+                        Random.nextInt() % 10 != 0
+                    ))
+                }
+            }
+        }
+    }
+    examResults.forEach {
+        println(it.exam_date.year)
+    }
+    examResults.forEach {
+        println("INSERT INTO EXAMRESULTS (student_id, subject_id, semester, exam_date, grade) VALUES (" +
+                "${it.student_id}, ${it.subject_id}, ${it.semester}, " +
+                "to_date('${SimpleDateFormat("dd.MM.yyyy").format(it.exam_date)}', 'dd.mm.yyyy'), ${it.grade});")
+    }
+    println()
+    creditResults.forEach {
+        println("INSERT INTO CREDITRESULTS (student_id, subject_id, semester, credit_date, is_credited) VALUES (" +
+                "${it.student_id}, ${it.subject_id}, ${it.semester}, " +
+                "to_date('${SimpleDateFormat("dd.MM.yyyy").format(it.credit_date)}', 'dd.mm.yyyy')," +
+                " '${if (it.credited) "Y" else "N"}');")
+    }
+}
